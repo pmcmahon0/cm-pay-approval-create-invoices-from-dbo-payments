@@ -1,0 +1,12 @@
+@font-face {
+  font-family: 'NeueHaasGroteskDisp Pro Md';
+  src: url('NHaasGroteskDSPro-65Md.eot'); /* IE9 Compat Modes */
+  src: url('NHaasGroteskDSPro-65Md.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+       url('NHaasGroteskDSPro-65Md.woff') format('woff'), /* Modern Browsers */
+       url('NHaasGroteskDSPro-65Md.ttf')  format('truetype'), /* Safari, Android, iOS */
+       url('NHaasGroteskDSPro-65Md.svg#8166d35894c383a4b60e821768d81454') format('svg'); /* Legacy iOS */
+       
+  font-style:   normal;
+  font-weight:  400;
+}
+

@@ -1,0 +1,13 @@
+*.DS_Store
+npm-debug.log
+.idea/*
+js
+*.log
+*.env
+public
+devUtil/js/*
+test/*.js
+/node_modules/*
+/devUtil/node_modules/*
+
+

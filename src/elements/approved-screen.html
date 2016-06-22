@@ -1,0 +1,305 @@
+<dom-module id="approved-screen">
+    <link rel="import" href="../styles/glg-theme.css" type="css">
+    <link rel="import" href="../styles/cm-pay-approval-common.css" type="css">
+    <link rel="import" href="reject-dialog.html">
+    <link rel="import" href="edit-amount-dialog.html">    
+    <template>
+        <style>
+            paper-input {
+              margin: 0 1em 1em 1em;
+            }
+            .pause-payment{
+                text-align: center;
+                margin: 60px;
+            }
+            .pause-payment paper-button{
+                padding: 0;
+            }
+            .status-bar{
+              margin-bottom: 20px;
+            }
+            #searchDiv{
+                background-color: #fff;
+                margin: 0px 0 10px 0;
+                border: 1px solid #f2f2f2;
+            }
+            #payeeInput { 
+                width: 15em; 
+            }
+            .minMaxInput { 
+                width: 10em; 
+            }
+            #minMaxTo {
+                --paper-input-container-color: white;
+                width: 2em;
+            }
+            table{
+              margin-bottom: 30px;
+              font-size: 14px;
+              border: 1px solid #f2f2f2;
+            }
+            table .currency{
+                text-align: right;
+            }
+            :root {
+                --paper-input-container-label:{
+                  padding: 0 0 0 5px;
+                };
+                --paper-input-container-input:{
+                  padding: 0 0 0 5px;
+                };
+                --paper-input-prefix:{
+                  padding: 0 10px 0 0;
+                };
+            }
+            iron-icon {
+                --iron-icon-width:18px;
+                --iron-icon-height:18px;
+            }   
+            tr iron-icon {
+                display: none;
+            }
+            tr:hover iron-icon {
+                display: inline-block;
+            } 
+            iron-icon.edit-reject-icon:hover {
+                color: red;
+            }     
+            .amount-button {
+                position: relative;
+                margin-right: 18px;
+                cursor: pointer; 
+            }  
+            .edit-amount-icon {
+                position:absolute;
+            }       
+        </style>
+        <div class="status-bar">
+            <h4>{{approvedTotal.INVOICE_COUNT}} Invoices {{approvedTotal.USD_AMOUNT}}</h4>
+        </div>
+        <div class="container">
+            <div id="searchDiv" class="layout horizontal baseline center-justified ">
+
+                <paper-input label="Payee Name (ID)"  id="payeeInput" inline="true" value="{{payeeNameFilter}}" >
+                    <iron-icon icon="search" prefix></iron-icon>
+                    <paper-icon-button suffix onclick="clearInput()" icon="clear" alt="clear" title="clear"></paper-icon-button>
+                </paper-input>
+
+                <paper-input class="minMaxInput" label="Min Amount"  id="minAmountInput" prevent-invalid-input allowed-pattern="[0-9]" inline="true" value="{{minAmountFilter}}" >
+                    <div prefix>$</div>
+                </paper-input>
+                <paper-input id="minMaxTo" readonly elevation="0" value="to"></paper-input>
+
+                <paper-input class="minMaxInput" label="Max Amount"  id="maxAmountInput" prevent-invalid-input allowed-pattern="[0-9]" inline="true"  value="{{maxAmountFilter}}">
+                    <div prefix>$</div>
+                </paper-input>    
+            </div>
+            <template is="dom-if" if="{{!isEmpty}}">
+                <table>
+                    <thead>
+                        <th>Approved Date</th>
+                        <th>Payee</th>
+                        <th>Account</th>
+                        <th  hidden$="{{!canRejectInvoice}}"></th>
+                        <th class="currency">Amount</th>
+                    </thead>
+                    <tbody>
+                        <template id="invoiceList" is="dom-repeat" items="{{filteredInvoices}}">
+                            <tr>
+                                <td>{{item.APPROVAL_DATE}}</td>
+                                <td>{{item.FORMATTED_PAYEE_NAME}}</td>
+                                <td>{{item.FORMATTED_PAYMENT_ACCOUNT_NAME}}</td>
+
+                                    <td hidden$="{{!canRejectInvoice}}">
+                                        <paper-icon-button class="reject-button" on-click="rejectInvoice">
+                                            <iron-icon class="edit-reject-icon" icon="icons:cancel"></iron-icon>
+                                        </paper-icon-button>
+                                    </td>
+
+                                <template is="dom-if" if="{{canChangeAmount}}">
+                                    <td class="currency" on-click="raiseEditAmountDialog">
+                                        <paper-icon-button class="amount-button">
+                                            {{item.USD_AMOUNT}}
+                                            <iron-icon class="edit-amount-icon" icon="editor:mode-edit"></iron-icon>
+                                        </paper-icon-button>
+                        
+                                    </td>
+                                </template>
+
+                                <template is="dom-if" if="{{!canChangeAmount}}">
+                                    <td class="currency">{{item.USD_AMOUNT_FORMATTED}}</td>
+                                </template>
+
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </template>
+            <template is="dom-if" if="{{isEmpty}}">
+                 <div id="emptyQueueMsg"><span>There are no approved payment requests</span></div>
+            </template>
+            <!--
+             <p class="pause-payment">
+                Payments for these invoices will be released to the bank on {{nextPaymentProcessorRunDate}} or you can
+                <paper-button flat on-click="onClickPause">Pause Payment Processor</paper-button> to be run at a later date.
+            </p> 
+            -->
+
+            <reject-dialog 
+              id="rejectDialog" 
+              open="false" 
+              approval-user="[[approvalUser]]" 
+              on-invoice-rejected="onInvoiceRejected">
+            </reject-dialog>
+
+        </div>
+
+        <edit-amount-dialog 
+            id="editAmountDialog" 
+            open="false" 
+            on-invoice-edit-amount="onInvoiceEditAmount">
+        </edit-amount-dialog>
+        
+    </template>
+    <script>
+        // element registration
+        Polymer({
+            is: "approved-screen",
+            properties: {
+                invoices: Array,
+                filteredInvoices: Array,
+                invoice: Object,
+                isEmpty: {
+                    type: Boolean,
+                    value: false,
+                    computed: 'getIsEmpty(invoices)'
+                },
+                nextPaymentProcessorRunDate: {
+                    type: Object,
+                    value: '<not available>'
+                },
+                scheduledAmount: Number,
+                scheduledFormattedAmount: {
+                    type: String,
+                    computed: 'formatScheduledAmount(scheduledAmount)'
+                },
+                approvedTotal: Object,
+                payeeNameFilter: {
+                    type: String,
+                    observer: 'filterChanged'
+                },
+                minAmountFilter: {
+                    type: String,
+                    observer: 'filterChanged'
+                },
+                maxAmountFilter: {
+                    type: String,
+                    observer: 'filterChanged'
+                },                
+                approvalUser: {
+                    type: Object,
+                    observer: 'approvalUserChanged'
+                },
+                canChangeAmount: Boolean,
+                canRejectInvoice: Boolean,
+            },
+            approvalUserChanged: function(newValue, oldValue) {
+                this.set('canChangeAmount',this.approvalUser && this.approvalUser.isAccountingMember);
+                this.set('canRejectInvoice',this.approvalUser && this.approvalUser.isAccountingMember);
+                this.refreshFromDb();
+            },            
+            formatScheduledAmount: function(amt) {
+                return invoiceModule.currencyFormat(amt);
+            },
+            getIsEmpty: function(invoices) {
+                return !invoices || invoices.length === 0;
+            },
+            ready: function() {
+                //this.refreshFromDb();                
+            },
+            onClickPause: function(evt) {
+                console.log("*** TODO: pause payment processor ***");
+            },
+            rejectInvoice: function (evt) {
+                this.invoice = evt.model.item;
+                this.$.rejectDialog.invoice = this.invoice;
+                this.$.rejectDialog.isOpen = true;
+            },
+            onInvoiceRejected: function () {
+                this.refreshFromDb();
+            },
+            filterChanged: function(value) {
+                (function(that) {
+                    if (that.invoices) {
+                        var filteredInvoices = [];
+                        var minValue = that.minAmountFilter ? parseFloat(that.minAmountFilter) : 0.0;
+                        var maxValue = that.maxAmountFilter ? parseFloat(that.maxAmountFilter) : Number.MAX_VALUE;
+                        var nameIdExp = new RegExp(that.payeeNameFilter, "i");
+                        for (invoice of that.invoices) {
+                            if (invoice.PAYEE_NAME.search(nameIdExp) > -1
+                                || (invoice.PAYEE_COUNCIL_MEMBER_ID && (invoice.PAYEE_COUNCIL_MEMBER_ID.toString().search(nameIdExp) > -1))
+                                || (invoice.PAYEE_PERSON_ID && (invoice.PAYEE_PERSON_ID.toString().search(nameIdExp) > -1))) {
+
+                                var amount = parseFloat(invoice.USD_AMOUNT.replace(/[|&;$%@"<>()+,]/g, ""));
+                                if (amount >= minValue && amount <= maxValue) {
+                                    filteredInvoices.push(invoice);
+                                }
+                            }
+                        }
+                        that.set('filteredInvoices', filteredInvoices);
+                    }
+                })(this);
+            },
+            refreshFromDb: function () {
+                (function(that) {
+                    return invoiceModule.getApprovedInvoices()
+                    .then( (results) => {
+                        that.invoices = results;
+                        that.scheduledAmount = 0;
+                        approvedTotal = {INVOICE_COUNT:0,USD_AMOUNT:0}
+                        for (i of that.invoices) {
+
+                            i.USD_AMOUNT = invoiceModule.currencyRound(i.USD_AMOUNT);
+
+                            that.scheduledAmount += i.USD_AMOUNT;
+                            approvedTotal.INVOICE_COUNT++;
+                            approvedTotal.USD_AMOUNT += i.USD_AMOUNT;
+                            i.APPROVAL_DATE = new moment(i.APPROVAL_DATE).local().format('MM/DD/YYYY');
+                            i["FORMATTED_PAYEE_NAME"] = i.PAYEE_NAME;
+                            if (i.PAYEE_COUNCIL_MEMBER_ID) {
+                                i.FORMATTED_PAYEE_NAME += " (" + i.PAYEE_COUNCIL_MEMBER_ID + ")";
+                            }
+                            var name = i.PAYMENT_ACCOUNT_NAME;
+                            var parenAccountId = " (" + i.PAYMENT_ACCOUNT_ID + ")";
+                            if (name) {
+                                name = name.replace(parenAccountId,''); // for the scrubbed dev db only
+                            }
+                            i["FORMATTED_PAYMENT_ACCOUNT_NAME"] = name + parenAccountId;
+                            i.USD_AMOUNT_FORMATTED = invoiceModule.currencyFormat(i.USD_AMOUNT);
+                        }  
+                        approvedTotal.USD_AMOUNT = invoiceModule.currencyFormat(approvedTotal.USD_AMOUNT);
+                        that.approvedTotal = approvedTotal; 
+                        that.filteredInvoices = _.slice(that.invoices);              
+                    })
+                    .catch(function(err) {
+                        console.log(err);
+                    });
+                })(this);
+            },
+            raiseEditAmountDialog: function(evt) {
+                this.$.editAmountDialog.amount = evt.model.item.USD_AMOUNT;
+                this.$.editAmountDialog.invoiceId = evt.model.item.INVOICE_ID;
+                this.$.editAmountDialog.isOpen = true;
+            },
+            onInvoiceEditAmount: function(evt) {
+                var data = {invoiceId:evt.detail.invoiceId,loggedInPersonId:this.approvalUser.personId,amount:evt.detail.amount};
+                    
+                invoiceModule.cloneInvoiceWithChanges(data)
+                .catch(function(err) {
+                    console.log(err);
+                });                 
+            }
+        });
+    </script>    
+</dom-module>
+

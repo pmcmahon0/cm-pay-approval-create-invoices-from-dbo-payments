@@ -1,0 +1,185 @@
+<dom-module id="on-hold-screen">
+    <link rel="import" href="../styles/glg-theme.css" type="css">
+    <link rel="import" href="../styles/cm-pay-approval-common.css" type="css">
+    <template>
+        <style></style>
+        <template is="dom-if" if="{{showList}}">
+            <style>
+              .status-bar{
+                margin-bottom: 20px;
+              }
+              table{
+                font-size: 14px;
+                border: 1px solid #f2f2f2;
+              }
+              table .currency{
+                text-align: right;
+              }
+            </style>
+            <div class="status-bar">
+                <h4>{{onHoldTotal.INVOICE_COUNT}} Invoices {{onHoldTotal.USD_AMOUNT}}</h4>
+            </div>
+            <div class="container">
+                <template is="dom-if" if="{{!isEmpty}}">
+                      <table>
+                        <thead>
+                            <th>Hold Date</th>
+                            <th>Payee</th>
+                            <th>CM Id</th>
+                            <th class="currency">Amount</th>
+                            <th width="50%">Note</th>
+                        </thead>
+                        <tbody>
+                            <template is="dom-repeat" items="{{holds}}">
+                                <tr on-click="onClickItem">
+                                    <td>{{item.FORMATTED_HOLD_DATE}}</td>
+                                    <td>{{item.PAYEE_NAME}}</td>
+                                    <td>{{item.PAYEE_COUNCIL_MEMBER_ID}}</td>
+                                    <td class="currency">{{item.USD_AMOUNT}}</td>
+                                    <td>{{item.NOTE}}</td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </template>
+                <template is="dom-if" if="{{isEmpty}}">
+                    <div id="emptyQueueMsg"><span>There are no payment requests on hold</span></div>
+                </template> 
+            </div>
+        </template> 
+        <template is="dom-if" if="{{!showList}}">
+            <style>
+                .back-button{
+                    margin: 20px 0;
+                }
+                .status-bar{
+                    margin-bottom: 20px;
+                }
+            </style>
+            <div class="container">
+                <paper-button flat noink class="back-button" on-click="backToHeldItems">
+                    <iron-icon icon="chevron-left" prefix></iron-icon>
+                    Back to Held Items
+                </paper-button>
+            </div>
+
+            <div class="layout horizontal container">
+              <div class="flex-2 container">
+                <invoice-detail 
+                    id="invoiceDetail" 
+                    is-on-hold="[[isOnHold]]" 
+                    invoice="[[invoice]]"
+                    user-person-id="[[userPersonId]]"
+                    on-invoice-cancelled="onInvoiceCancelled" 
+                    on-invoice-approved="onInvoiceApproved"
+                    on-invoice-rejected="onInvoiceRejected"
+                    ></invoice-detail>
+              </div>
+              <div>
+                <accounting-context id="accountingContext" payee-person-id="[[invoice.PAYEE_PERSON_ID]]" user-person-id="[[userPersonId]]"></accounting-context>
+              </div>
+            </div>
+        </template>
+    </template>
+    <script>
+        Polymer({
+            is: "on-hold-screen",
+
+            properties: { 
+                showList: {
+                    type: Boolean,
+                    value: true
+                },
+                isEmpty: {
+                    type: Boolean,
+                    value: false,
+                    computed: 'getIsEmpty(holds)'
+                },
+                invoice: Object,
+                isOnHold: {
+                    type: Boolean,
+                    value: false,
+                    readonly: true 
+                },
+                lastUpdated: Date,
+                onHoldTotal: Object, 
+                approvalUser: {
+                    type: Object,
+                }                   
+            },            
+            getIsEmpty: function(holds) {
+                return !holds || holds.length === 0;
+            },
+            onInvoiceApproved: function() {
+                (function(that) {
+                    that.showList = true;
+                    that.refreshFromDb();
+                })(this);
+            },
+            onInvoiceRejected: function() {
+                (function(that) {
+                    that.showList = true;
+                    that.refreshFromDb();
+                })(this);
+            },
+            backToHeldItems: function() {
+                this.showList = true;
+            },             
+            attached: function() {
+                this.refreshFromDb();
+                //this.periodicRefresh();
+            },  
+            periodicRefresh: function(){
+                console.log("on-hold-screen:periodicRefresh");
+                invoiceModule.getMostRecentHoldDate()
+                .then( (result) => {
+                    var maxHoldDate = new moment(result[0].MAX_HOLD_DATE).local();
+                    console.log("max: " + maxHoldDate.format() + " lastUpdated: " + this.lastUpdated.format());
+                    if (maxHoldDate > this.lastUpdated) {
+                        return this.refreshFromDb();
+                    }
+                });
+                this.async(this.periodicRefresh,15000);                
+            },
+            refreshFromDb: function() {
+                console.log("refreshFromDb");
+                (function(that) {
+                    if (!that.user.personId) return;
+                    invoiceModule.getHolds(that.approvalUser.personId)
+                    .then( (results) => {
+                        var onHoldTotal = {INVOICE_COUNT:0,USD_AMOUNT:0};
+                        for (var i = 0; results && i < results.length; i++) {
+                            var result = results[i];
+                            result.USD_AMOUNT = invoiceModule.currencyRound(result.USD_AMOUNT);
+                            result.FORMATTED_HOLD_DATE = new moment(result.HOLD_DATE).local().format('MM/DD/YYYY');
+
+                            onHoldTotal.INVOICE_COUNT++;
+                            onHoldTotal.USD_AMOUNT += result.USD_AMOUNT;
+
+                            result.USD_AMOUNT = invoiceModule.currencyFormat(result.USD_AMOUNT);
+                        }
+                        onHoldTotal.USD_AMOUNT = invoiceModule.currencyFormat(onHoldTotal.USD_AMOUNT);
+                        that.onHoldTotal = onHoldTotal;
+                        that.set('holds', results); 
+                        that.isOnHold = true;
+
+                    })
+                    .catch(function(err) {
+                        console.error(err);
+                    });
+                    that.lastUpdated = moment().utc();
+                })(this);
+            },
+            onClickItem: function(evt) {
+                (function(that) {
+                    var hold = evt.model.item;
+                    invoiceModule.getInvoiceDetail(hold.INVOICE_ID,hold.KIND,null)
+                    .then((result) => {
+                        that.invoice = result;
+                        that.showList = false;
+                    });      
+               })(this);
+            },
+        });
+    </script>
+</dom-module>

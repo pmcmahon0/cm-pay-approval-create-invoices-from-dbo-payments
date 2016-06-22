@@ -1,0 +1,110 @@
+<dom-module id="edit-amount-dialog">
+    <link rel="import" href="../styles/glg-theme.css" type="css">
+    <link rel="import" href="../styles/cm-pay-approval-common.css" type="css">
+    <link rel="import" href="two-decimal-validator.html">
+
+    <template>
+      <style type="text/css">
+        h5{
+          text-align: left !important;
+          text-transform: uppercase;
+          font-weight: bold;
+          padding: 25px 25px 0 !important;
+        }
+        paper-dialog {
+          width: 20em;          // need a fixed width or else the textarea will resize *horizontally*
+        }
+        paper-button.cancel{
+          color: #fff;
+          position: absolute;
+          top: -55px;
+          right: -83px;
+          font-size: 2.5em;
+        }
+        .buttons{padding: 0;margin-top:1em;}
+        .dialog-body{
+          margin-top: 10px;
+        }
+        paper-button {
+          margin: 0;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+          /* display: none; <- Crashes Chrome on hover */
+          -webkit-appearance: none;
+          margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+        }
+      </style>
+        <paper-dialog modal id="dialog">
+          <h5>Edit Amount</h5>
+          <div layout horizontal class="dialog-body">
+            <paper-button dialog-dismiss class="cancel">&times;</paper-button>
+                <two-decimal-validator id="valid1" validator-name="validator1"/>
+                <paper-input autofocus id="amountInput" is="iron-input" value="{{amount}}" 
+                  auto-validate allowed-pattern="[0-9\.\,]" validator="validator1" error-message="" on-keydown="checkForEnterKey">
+                  <div prefix>$</div>
+                </paper-input>
+
+             <div class="buttons">
+              <paper-button raised class="flex primary submit" on-click="submit">Submit</paper-button>
+            </div>
+          </div>
+        </paper-dialog>
+  </template>
+
+  <script>
+    // element registration
+    Polymer({
+        is: "edit-amount-dialog",
+        properties: {
+          isOpen: {
+            type: Boolean,
+            value: false,
+            observer: 'isOpenChanged'
+          },
+          amount: Number,
+          originalAmount: Number,
+          invoiceId: String,
+        },
+        isOpenChanged: function(isOpen, wasOpen) {
+          if (isOpen && !this.$.dialog.opened) {
+            this.$.dialog.open();
+          }
+        },
+        submit: function (evt) {
+          var inputElem = Polymer.dom(this.$.dialog).querySelector('#amountInput');
+          var errorElem = Polymer.dom(inputElem).querySelectorAll('.paper-input-error-0');
+          if (this.$.amountInput.invalid) {
+            this.$.amountInput.errorMessage = "Invalid amount";
+            return;
+          }
+          var newAmount = parseFloat(this.amount.replace(',',''));
+          if (newAmount > this.originalAmount) {
+            this.$.amountInput.errorMessage = "Amount must be less than " + this.originalAmount.toString();
+            this.$.amountInput.invalid = true;
+          }
+          else {
+            this.fire('invoice-edit-amount', { invoiceId:this.invoiceId, amount:parseFloat(this.amount) });
+            this.$.dialog.close();
+          }
+        },
+        checkForEnterKey: function (e) {
+            if (e.keyCode === 13) {
+              this.submit();
+            }
+        },     
+        ready: function () {
+
+          this.$.dialog.addEventListener('iron-overlay-canceled', (evt) => {
+            this.isOpen = false;
+          });
+          this.$.dialog.addEventListener('iron-overlay-closed', (evt) => {
+            this.isOpen = false;
+          });
+          this.$.dialog.addEventListener('iron-overlay-opened', (evt) => {
+            this.originalAmount = this.amount;
+          });
+        }
+    });
+  </script>
+</dom-module>

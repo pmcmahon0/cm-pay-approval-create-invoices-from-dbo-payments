@@ -1,0 +1,131 @@
+<dom-module id="app-page">
+    <template>
+        <style is="custom-style">
+            paper-menu{
+                background-color: #1f2532;
+                /*background-color: #ededed;*/
+                font-weight: bold;
+                font-size: 14px;
+                -webkit-font-smoothing: antialiased !important;
+                text-shadow: 1px 1px 1px rgba(0,0,0,0.004);
+                text-transform: uppercase;
+                text-align: center;
+                padding: 15px;
+            }
+            a{
+                padding: 0 15px;
+                text-decoration: none;
+                position: relative;
+            }
+            a:link, a:visited, a:hover, a:focus, a:active {
+                color: #898f9a;
+                text-decoration: none
+            }
+            a.iron-selected,
+            .paper-menu *:focus {
+                color: #fff;
+            }
+            a.iron-selected:after,
+            .paper-menu *:focus:after {
+                background-color: transparent !important;
+                content: '';
+                position: absolute;
+                left: 50% !important;
+                top: 140% !important;
+                width: 0;
+                height: 0;
+                border-left: 20px solid transparent !important;
+                border-right: 20px solid transparent !important;
+                border-bottom: 20px solid #f7f7f7 !important;
+                clear: both;
+                margin-left: -21px;
+                opacity: 1 !important;
+            }
+        </style>
+        <approval-user id="approvalUser" approval-user="{{approvalUser}}"></approval-user>
+
+        <paper-menu class="list" attr-for-selected="data-route" selected="[[route]]">
+            <a data-route="pending" href="{{baseUrl}}pending-screen">
+                <span>Pending</span>
+            </a>
+        <!--    
+            <a data-route="on-hold" href="{{baseUrl}}on-hold-screen">
+                <span>On Hold</span>
+            </a> 
+        -->
+            <template is="dom-if" if="[[approvalUser.isAccountingMember]]">
+                <a data-route="approved" href="{{baseUrl}}approved-screen">
+                    <span>Approved</span>
+                </a>
+            </template>
+        </paper-menu>
+
+        <div id="spinnerDiv" class="layout vertical center">
+            <paper-spinner id="paperSpinner" active="true" alt="Loading"></paper-spinner>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            <iron-pages id="ironPages" attr-for-selected="data-route" selected="{{route}}">
+                <section id="pendingSection" data-route="pending">
+                    <paper-material elevation="0">
+                        <pending-screen id="pendingScreen" approval-user="{{approvalUser}}"></pending-screen>
+                </paper-material>
+                </section>
+            <!--
+                <section id="onHoldSection" data-route="on-hold">
+                    <paper-material elevation="0">
+                        <on-hold-screen id="onHoldScreen" approval-user="{{approvalUser}}"></on-hold-screen>
+                    </paper-material>
+                </section>
+            -->
+                <template is="dom-if" if="[[approvalUser.isAccountingMember]]">
+                    <section id="approvedSection" data-route="approved">
+                        <paper-material elevation="0">
+                            <approved-screen id="approvedScreen" approval-user="{{approvalUser}}"></approved-screen>
+                        </paper-material>
+                    </section>
+                </template>
+            </iron-pages>
+        </div>        
+    </template>
+    <script>
+        Polymer({
+            is: "app-page",
+
+            properties: {
+                approvalUser: {
+                    type: Object,
+                    value: {approvalGroupMembership:[]}
+                }
+            },
+            ready: function() {
+                var that = this;
+                this.$.paperSpinner.active = false;
+                this.$.spinnerDiv.style.display = 'none';
+                this.$.ironPages.addEventListener('iron-select', this.onIronSelect);
+
+                this.$.pendingScreen.addEventListener('invoice-approved', function(evt) { 
+                    var screen = that.$$('#approvedScreen');
+                    if (screen) screen.refreshFromDb();
+                });
+
+                this.$.pendingScreen.addEventListener('invoice-held', function(evt) {
+                    var screen = that.$$('#onHoldScreen');
+                    if (screen) screen.refreshFromDb();
+                }); 
+
+                // this.$.onHoldScreen.addEventListener('invoice-approved', function(evt) {
+                //     var screen = that.$$('#approvedScreen');
+                //     if (screen) screen.refreshFromDb();
+                // });                                
+            },           
+            onIronSelect: function(evt) {
+                var screen = Polymer.dom(this).querySelector('on-hold-screen');
+                if (screen) {
+                    screen.showList = true; // Ensure the user sees the list view not the detail view
+                }
+            }
+        });
+    </script>
+</dom-module>

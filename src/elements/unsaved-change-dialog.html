@@ -1,0 +1,76 @@
+<dom-module id="unsaved-change-dialog">
+    <link rel="import" href="../styles/glg-theme.css" type="css">
+    <link rel="import" href="../styles/cm-pay-approval-common.css" type="css">
+    <template>
+      <style type="text/css">
+        h5{
+          text-align: left !important;
+          text-transform: uppercase;
+          font-weight: bold;
+          padding: 0 !important;
+        }
+        paper-dialog {
+          width: 24em;          // need a fixed width or else the textarea will resize *horizontally*
+        }
+        paper-dropdown-menu{
+          width: 100%;
+        }
+        paper-button{
+          display: block;
+          margin: 0 0 10px 0;
+        }
+        paper-button.default, paper-button.btn-default, paper-button[default] {
+          background-color: #fff;
+          color: #8a8a8a;
+          border: 1px solid #c8c8c8;
+        }
+        .submit{
+          margin-top: 20px;
+        }
+      </style>
+        <paper-dialog modal id="dialog">
+          <div>
+
+            <h5>You Have Unsaved Changes</h5>
+            <p>
+              You have not finished editing this invoice. Would you like to skip to the next invoice without saving?
+            </p>
+            <paper-button dialog-confirm raised class="primary submit" on-click="submit">Yes, Skip Without Saving</paper-button>
+            <paper-button dialog-dismiss class="default">No, Stay On This Invoice</paper-button>
+
+          </div>
+        </paper-dialog>
+  </template>
+
+  <script>
+    // element registration
+    Polymer({
+        is: "unsaved-change-dialog",
+        properties: {
+          isOpen: {
+            type: Boolean,
+            value: false,
+            observer: 'isOpenChanged'
+          }
+        },
+        isOpenChanged: function(isOpen, wasOpen) {
+          if (isOpen && !this.$.dialog.opened) {
+            this.$.dialog.open();
+          }
+        },
+        submit: function () {
+          this.fire('invoice-skipped', null);
+        },
+        ready: function () {
+          this.$.dialog.addEventListener('iron-overlay-canceled', (evt) => {
+            this.isOpen = false;
+            console.log("iron-overlay-canceled");
+          });
+          this.$.dialog.addEventListener('iron-overlay-closed', (evt) => {
+            this.isOpen = false;
+            console.log("iron-overlay-closed");
+          });
+        }
+    });
+  </script>
+</dom-module>

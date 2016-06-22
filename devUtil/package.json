@@ -1,0 +1,31 @@
+{
+  "name": "util",
+  "version": "0.0.1",
+  "description": "Utility for creating data for payment approval screens",
+  "main": "cmAccountImporter.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node js/util.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "homepage": "",
+  "author": "GLG",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "3.0.5",
+    "coffee-script": "1.9.1",
+    "commander": "2.8.1",
+    "lodash": "4.6.1",
+    "moment": "2.9.0",
+    "node-fetch": "1.3.3",
+    "request": "2.69.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": "0.12.2"
+  },
+  "private": true
+}

@@ -1,0 +1,97 @@
+<dom-module id="events-context">
+    <link rel="import" href="../styles/glg-theme.css" type="css">
+    <link rel="import" href="../styles/cm-pay-approval-common.css" type="css">
+    <template>
+      <style>
+        paper-card{
+          margin: 0 0 20px 0;
+          padding: 30px;
+          border: 1px solid #f2f2f2;
+          width: 100%;
+        }
+        paper-tooltip{
+          width: 200px;
+        }
+        h4{
+          @apply(--uppercase-label);
+          margin-bottom: -5px;
+        }
+      </style>
+      <!-- For Events -->
+      <paper-card>
+          <div class="card-header">
+              <h4>Project</h4>
+          </div>
+          <hr/>
+          <div class="card-body">
+              <p>
+                  <strong>Total Expenses</strong><br>
+                  {{totalApproved}}&nbsp;of&nbsp;{{total}}
+                  <paper-tooltip position="top left">The total amount approved for the current project.</paper-tooltip>
+              </p>
+              <p>
+                  <strong>Total for {{invoiceType}}</strong><br>
+                  {{totalForTypeApproved}}&nbsp;of&nbsp;{{totalForType}}
+                  <paper-tooltip position="top left">The total amount approved for this type within this project.</paper-tooltip>
+              </p>
+          </div>
+      </paper-card>
+
+    </template>
+    <script>
+        // element registration
+        Polymer({
+            is: "events-context",
+
+            properties: {
+                payeePersonId: {
+                    type: Number,
+                    observer: 'refreshFromDb'
+                },
+                totalApproved: Number,
+                total: Number,
+                totalForType: Number,
+                userPersonId: {
+                  type: String,  
+                  observer: 'refreshFromDb'   
+                },
+                invoiceId: {
+                  type: String,
+                  observer: 'refreshFromDb'
+                },
+                invoiceType: String,
+            },        
+            refreshFromDb: function() {
+                (function(that) {
+                    if (!that.payeePersonId || !that.userPersonId) return;
+                    return invoiceModule.getEventsContext(that.payeePersonId, that.userPersonId, that.invoiceId)
+                    .then((result) => {
+                        if (result  && result.length > 0) {
+                            var obj = result[0];
+                            that.invoiceType = obj.invoiceType.toUpperCase();
+                            that.totalApproved = that.formatCurrency(obj.totalApproved);
+                            that.total = that.formatCurrency(obj.total);
+                            that.totalForType = that.formatCurrency(obj.totalOfType);
+                            that.totalForTypeApproved = that.formatCurrency(obj.totalOfTypeApproved);
+                        }
+                    })
+                    .catch(function(err) {
+                        console.log(err);
+                    });
+                })(this);                        
+            },
+            formatCurrency: function(amount) {
+              return invoiceModule.currencyFormat(invoiceModule.currencyRound(amount));
+            },
+            periodicRefresh: function() {
+                console.log("events-context:periodicRefresh");
+                this.refreshFromDb();
+                this.async(this.periodicRefresh,40000);                
+            },
+            attached: function() {
+                this.refreshFromDb();
+                //this.periodicRefresh();
+            }
+        });
+    </script>
+</dom-module>

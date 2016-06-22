@@ -1,0 +1,64 @@
+<dom-module id="receipt-dialog">
+    <link rel="import" href="../styles/glg-theme.css" type="css">
+    <link rel="import" href="../styles/cm-pay-approval-common.css" type="css">
+    <template>
+      <style type="text/css">
+        h5{
+          text-align: left !important;
+          text-transform: uppercase;
+          font-weight: bold;
+          padding: 0 !important;
+        }
+        paper-button.cancel{
+          color: #fff;
+          position: absolute;
+          top: -55px;
+          right: -83px;
+          font-size: 2.5em;
+        }
+        img{ 
+          max-width: 100% 
+        }
+        paper-button{margin: 0;}
+      </style>
+        <paper-dialog modal id="dialog" class="attachment-container">
+          <div layout horizontal>
+            <paper-button noink dialog-dismiss class="cancel">&times;</paper-button>
+            <img src="{{receiptsUrl}}" class="border-image">
+          </div>
+        </paper-dialog-scrollable>
+  </template>
+
+  <script>
+    // element registration
+    Polymer({
+        is: "receipt-dialog",
+        properties: {
+          isOpen: {
+            type: Boolean,
+            value: false,
+            observer: 'isOpenChanged'
+          },
+          receiptsUrl:{
+            type: String
+          }
+        },
+        isOpenChanged: function(isOpen, wasOpen) {
+          if (isOpen && !this.$.dialog.opened) {
+            this.note = null;
+            this.$.dialog.open();
+          }
+        },
+        ready: function () {
+          this.$.dialog.addEventListener('iron-overlay-canceled', (evt) => {
+            this.isOpen = false;
+            console.log("iron-overlay-canceled");
+          });
+           this.$.dialog.addEventListener('iron-overlay-closed', (evt) => {
+            this.isOpen = false;
+            console.log("iron-overlay-closed");
+          });
+        }
+    });
+  </script>
+</dom-module>

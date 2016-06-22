@@ -1,0 +1,107 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html"></link>
+<script src="../js-cookie/src/js.cookie.js"></script>
+
+<dom-module id="glg-current-user">
+  <template>
+    <iron-ajax
+      id="xhr"
+      handle-as="json"
+      with-credentials="true"
+      on-response="_handleUser"
+      url="[[url]]"
+      params="[[qs]]"
+    >
+    </iron-ajax>
+    <template is="dom-if" if="{{debug}}">
+      <div>Hello <span>[[user.firstName]]</span>,</div>
+      <div>Your username is <span>{{user.loginName}}</span></div>
+      <div>Your person ID is <span>{{user.personId}}</span></div>
+    </template>
+  </template>
+</dom-module>
+
+<script>
+  Polymer({
+    is: 'glg-current-user',
+    properties: {
+      url: {
+        type: String,
+        value: 'https://services.glgresearch.com/epistream-ldap/epiquery1/glglive/glgCurrentUser/getUserByLogin.mustache',
+      },
+      qs: {
+        type: Object,
+        computed: '_buildQueryString(username)',
+        value: ''
+      },
+      username: {
+        type: String,
+        value: function() {
+          var glgrootCookie = Cookies.getJSON('glgroot');
+          var starphleetCookie = Cookies.getJSON('starphleet_user');
+          var glgSAMCookie = Cookies.getJSON('glgSAM');
+          var glguserCookie = Cookies.get('glguserinfo');
+          return  'pmcmahon';//this._extractUserName(glgrootCookie, starphleetCookie, glgSAMCookie, glguserCookie);
+        },
+        observer: '_usernameChanged',
+        notify: true,
+        reflect: true
+      },
+      // Property to bind to get the current user
+      user: {
+        type: Object,
+        notify: true
+      },
+      debug: {
+        type: Boolean,
+        notify: true,
+        value: false
+      }
+    },
+    _domainifyUsername: function(name) {
+      if (name.toLowerCase().indexOf('glgroup') === -1) {
+        return "glgroup\\" + name;
+      } else {
+        return name;
+      }
+    },
+    _handleUser: function(evt) {
+      this.user = evt.detail.response[0];
+    },
+    _buildQueryString: function(name) {
+      return {login : this._domainifyUsername(name)};
+    },
+    _usernameChanged: function(name) {
+      if (window.glgUserCache[name]) {
+        this.user = window.glgUserCache[name];
+      }
+      return this.debounce('fetch', (function(_this) {
+        return function() {
+          return _this.$.xhr.generateRequest();
+        };
+      })(this), 200);
+    },
+    _extractUserName: function(glgrootCookie, starphleetCookie, glgSAMCookie, glguserCookie) {
+      if (typeof starphleetCookie === 'string' && starphleetCookie) {
+        return starphleetCookie;
+      } else if (glgrootCookie === 'object' && glgrootCookie.username) {
+        return glgrootCookie.username;
+      } else if (typeof glgSAMCookie  === 'object' && glgSAMCookie.username) {
+        return glgSAMCookie.username;
+      } else if (glguserCookie) {
+        try {
+          return (JSON.parse(atob(glguserCookie))).username;
+        }
+        catch (err) {
+          console.error("Failed to extract username from glguserinfo cookie: " + err);
+          return '';
+        }
+      } else {
+        return '';
+      }
+    },
+    created: function() {
+      window.glgUserCache = window.glgUserCache || {};
+    }
+  });
+</script>

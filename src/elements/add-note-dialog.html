@@ -1,0 +1,76 @@
+<dom-module id="add-note-dialog">
+    <link rel="import" href="../styles/glg-theme.css" type="css">
+    <link rel="import" href="../styles/cm-pay-approval-common.css" type="css">
+    <template>
+      <style type="text/css">
+        h5{
+          text-align: left !important;
+          text-transform: uppercase;
+          font-weight: bold;
+          padding: 25px 25px 0 !important;
+        }
+        paper-dialog {
+          width: 48em;          // need a fixed width or else the textarea will resize *horizontally*
+        }
+        paper-button.cancel{
+          color: #fff;
+          position: absolute;
+          top: -55px;
+          right: -83px;
+          font-size: 2.5em;
+        }
+        .buttons{padding: 0;}
+        .dialog-body{
+          margin-top: 10px;
+        }
+        paper-button.submit{
+          margin-top: 20px;
+        }
+        paper-button{margin: 0;}
+      </style>
+        <paper-dialog modal id="dialog">
+          <h5>Add a Note</h5>
+          <div layout horizontal class="dialog-body">
+            <paper-button dialog-dismiss class="cancel">&times;</paper-button>
+            <paper-textarea rows="1" placeholder="Note" value="{{note}}" autofocus></paper-textarea>
+             <div class="buttons">
+              <paper-button dialog-confirm raised class="flex primary submit" on-click="submit">Submit</paper-button>
+            </div>
+          </div>
+        </paper-dialog>
+  </template>
+
+  <script>
+    // element registration
+    Polymer({
+        is: "add-note-dialog",
+        properties: {
+          isOpen: {
+            type: Boolean,
+            value: false,
+            observer: 'isOpenChanged'
+          },
+          note: String
+        },
+        isOpenChanged: function(isOpen, wasOpen) {
+          if (isOpen && !this.$.dialog.opened) {
+            this.note = null;
+            this.$.dialog.open();
+          }
+        },
+        submit: function () {
+          this.fire('invoice-add-note', this.note);
+        },
+        ready: function () {
+          this.$.dialog.addEventListener('iron-overlay-canceled', (evt) => {
+            this.isOpen = false;
+            console.log("iron-overlay-canceled");
+          });
+          this.$.dialog.addEventListener('iron-overlay-closed', (evt) => {
+            this.isOpen = false;
+            console.log("iron-overlay-closed");
+          });
+        }
+    });
+  </script>
+</dom-module>

@@ -1,0 +1,579 @@
+<dom-module id="invoice-detail">
+    <link rel="import" href="../styles/glg-theme.css" type="css">
+    <link rel="import" href="../styles/cm-pay-approval-common.css" type="css">
+    <link rel="import" href="reject-dialog.html">
+    <link rel="import" href="hold-dialog.html">
+    <link rel="import" href="receipt-dialog.html">
+    <link rel="import" href="unsaved-change-dialog.html">
+    <link rel="import" href="add-note-dialog.html">    
+    <template>
+        <style>
+          paper-button{
+            margin-bottom: 10px;
+            font-size: 14px;
+          }
+          paper-card{
+            margin-bottom: 40px;
+            width: 100%;
+            border: 1px solid #f2f2f2;
+          }
+          .invoice-amount{
+            text-align: center;
+            margin-top: 0px;
+            min-height: 55px;
+          }
+          .invoice-amount h2{
+            margin-top: 10px;
+            margin-bottom: 0;
+            line-height: 1;
+          }
+          .invoice-amount p{
+            font-size: .8em;
+            margin-bottom: 0;
+            line-height: 1;
+            margin-top: 7px;
+          }
+          .description{
+            margin-right: 30px;
+          }
+          .card-header{
+            padding: 30px 30px 0;
+          }
+          .card-header h4{
+            @apply(--uppercase-label);
+            margin-bottom: 0;
+          }
+          .card-header p{
+            margin-top: 0;
+          }
+          .card-body{
+            padding: 0px 30px 15px;
+          }
+          .card-footer{
+            padding: 30px;
+            background-color: #fafafa;
+            border-top: 1px solid #eee;
+          }
+          .card-footer hr{
+            margin-bottom: 0;
+          }
+          .card-footer .section-label{
+            margin-right: 10px;
+          }
+          .buttons{
+            padding-top: 10px;
+          }
+          img.border-image {
+            border: 1px solid #eee;
+            padding:3px;
+            margin-left: -2px;
+          }
+
+          #projects { width:100%; }
+          .project-meta {
+            font-size: 0.7em;
+            color: #333;
+          }
+          .paper-menu {
+            padding-top: 0;
+            padding-bottom: 0;
+          }
+          .project-title-static {
+            font-size: 0.9em;
+            padding: 0em 0.5em 0.5em 0.5em;
+            line-height: 1em;
+          }
+          .project-meta-static {
+            font-size: 0.8em;
+            margin-top: 0.5em;
+            font-style: italic;
+          }
+          .project-dropdown-meta {
+            font-size: 0.8em;
+            line-height: 1.0em;
+            color: #333;
+            padding-top: 2px;
+            padding-bottom: 2px;
+            padding-left: 1em;
+          }
+          .project-dropdown-meta span {
+            padding-right: 1em;
+          }
+          .project-meta-title {
+            font-size: 0.8em;
+            color: #000;
+            margin-bottom: 0.5em;
+          }
+          .project-dropdown-title {
+            font-size: 1.0em;
+            line-height: 1.0em;
+            color: #000;
+            padding-bottom: 2px;
+          }
+          .project-list {
+            padding: 0.7em .5em;
+            align-items: flex-start;
+          }
+          iron-icon {
+            --iron-icon-width:18px;
+            --iron-icon-height:18px;
+          }
+          .editable-field iron-icon {
+            display: none;
+          }
+          .editable-field:hover iron-icon {
+            display: inline-block;
+          }
+          paper-menu-button {
+            padding: 0px;
+          }
+          paper-item.paper-item-0 {
+            font-family: 'Grotesk', sans-serif !important;
+          }
+          .tiny-text {
+            font-size: 0.6em;
+            color: #828a9b !important;
+          }
+          .card-header-title {
+            color: #3a4253;
+          }
+          #addNoteIcon {
+            margin-bottom: 3px;
+          }
+          #addNoteButton:hover {
+            color: #1f2532;
+          }
+          #addNoteButton {
+            font-size:0.75em;
+            cursor: pointer;
+          }          
+          .noteButton{
+            padding: 8px 8px 6px;
+            border-radius: 3px;
+          }
+          .noteContent{
+            margin: 0;
+          }
+          .noteDate{
+            font-size:0.75em;
+            margin-bottom: 0;
+            color: #ccc;
+          }
+          .noteSeparator {
+            margin-top: 0.5em;
+            margin-bottom: 0.5em;
+            color: #F7F7F7;
+          }
+          .noteAuthor {
+            color: #444444;
+            margin-bottom: 0px;
+          }
+          .note{
+            border-top: 1px solid #eee;
+            padding: 20px 0;
+          }
+          .note:first-child{
+            border-top: 0px solid #eee;
+          }
+          #editProjectIcon{
+            cursor: pointer; 
+          }
+          .noNotes {
+            margin-top: 20px;
+          }
+
+        </style>
+        
+        <paper-card>
+            <div class="card-header">
+                <h4 style="display: inline-block">
+                <a class="card-header-title" target="_blank" href="https://services.glgresearch.com/advisors/#/cm/{{invoice.PAYEE_COUNCIL_MEMBER_ID}}">
+                    <strong>{{invoice.PAYEE_NAME}}</strong>
+                  </a>  
+                </h4>
+         
+                <a class="tiny-text" hidden$="{{!cmSfdcLink}}" target="_blank" href="{{cmSfdcLink}}">in Salesforce</a>
+                <h4 hidden$="{{invoice.PAYEE_COUNCIL_MEMBER_ID}}">
+                  <strong>{{invoice.PAYEE_NAME}}</strong>
+                </h4>                
+                <p>Account Name: {{invoice.PAYMENT_ACCOUNT_NAME}}</p>
+            </div>
+            <hr>
+            <div class="card-body layout horizontal">
+                <div class="flex-3 description">
+                  <p>
+                    <strong>Project</strong>
+                    <br>{{projectDetail.PROJECT_TYPE}}
+                    <span hidden$="{{!invoice.INTERPRETER_FOR_PERSON_NAME}}">for {{invoice.INTERPRETER_FOR_PERSON_NAME}} on </span>
+                    <template is="dom-if" if="{{canChangeProject}}">
+                      <paper-menu-button class="editable-field">
+                        <paper-icon-button class="dropdown-trigger" alt="menu">
+                          {{projectDetail.PROJECT_TITLE}}
+                          <iron-icon id="editProjectIcon" icon="editor:mode-edit"></iron-icon>
+                        </paper-icon-button>
+                        <paper-menu selected="{{selectedProjectId}}" on-iron-select="onIronSelectProject" attr-for-selected="value" class="dropdown-content">
+                          <template is="dom-repeat" items="{{projects}}" filter="filterProjects">
+                            <paper-item value="[[item.projId]]" label="[[item.projTitle]]" selected-project="[[item]]" class="project-list layout vertical">
+                              <span class="flex project-dropdown-title">{{item.projTitle}}</span>
+                              <div class="project-dropdown-meta layout vertical">
+                                <span>[[item.clientContact]]</span>
+                                <span>[[item.clientCompany]]</span>
+                              </div>
+                              <div class="project-dropdown-meta layout horizontal">
+                                <span>[[formatDate(item.firstContactDate)]]</span>
+                                <span>[[item.projType]]</span>
+                                <span>ID: [[item.displayProjId]]</span>
+                              </div>
+                            </paper-item>
+                          </template>
+                        </paper-menu>
+                      </paper-menu-button>
+                    </template>
+                    <template is="dom-if" if="{{!canChangeProject}}">
+                      {{projectDetail.PROJECT_TITLE}}
+                    </template>
+                    <br>
+                  </p> 
+                  <p hidden$="{{!isExpenseInvoice}}">
+                    <strong>Expense Date And Type</strong><br>
+                    <span class="layout horizontal">
+                      <span>{{invoice.EXPENSE_DATE}}&nbsp;{{invoice.INVOICE_TYPE}}</span>
+                    </span>   
+                  </p>           
+                  <p hidden$="{{!invoice.DESCRIPTION}}">
+                    <strong>Description</strong><br>{{invoice.DESCRIPTION}}
+                  </p>
+                  <p hidden$="{{!isBillableTime}}">
+                    <strong>Billable Time</strong><br>
+                    <span hidden$="{{!invoice.PREP_TIME}}">
+                      {{invoice.PREP_TIME}} Minutes Prep Time<br>
+                    </span>
+                    <span hidden$="{{!invoice.MEETING_TIME}}">
+                      {{invoice.MEETING_TIME}} Minutes Meeting Time {{projectDetail.twilioString}}
+                    </span>
+                  </p>
+                  <p>
+                    <strong>Client</strong><br>
+                    <template is="dom-repeat" items="{{projectDetail.CLIENTS}}">
+                        <div>{{item.CLIENT_NAME}}&nbsp-&nbsp{{item.CLIENT_ID}}</div>
+                    </template>
+                  </p>
+                  <p>
+                    <strong>Research Manager</strong><br>{{projectDetail.PRIMARY_RM_NAME}}
+                  </p>
+
+                </div>
+                <div class="flex">
+                  <div class="invoice-amount">
+                    <h2>{{invoice.USD_AMOUNT}}</h2>
+                    <span hidden$="{{!projectDetail.HOURLY_RATE}}">
+                      <p>${{projectDetail.HOURLY_RATE}}/hr</p>
+                    </span>
+                  </div>
+                  <div class="layout vertical buttons">
+                    <paper-button raised class="flex primary" on-click="approve">Approve</paper-button>
+                    <paper-button raised class="flex error" on-click="reject">Reject</paper-button>
+                    <paper-button raised class="flex secondary" on-click="skip">Skip</paper-button>
+                    <paper-button raised class="flex default" on-click="displayReceipt" hidden$="{{!invoice.RECEIPTS_URL}}">
+                      <iron-icon icon="attachment"></iron-icon>
+                      View Receipt
+                    </paper-button>
+<!--                     <template is="dom-if" if="{{!isOnHold}}">
+                        <paper-button raised class="flex default" on-click="hold">Hold</paper-button>
+                    </template>
+                    <template is="dom-if" if="{{isOnHold}}">
+                        <paper-button disabled flat class="flex" on-click="cancel">On Hold</paper-button>
+                    </template> -->
+                  </div>
+                </div>
+            </div>
+            <div class="card-footer">
+              <p>
+                <strong class="section-label"><span id="noteCounter">{{invoice.NOTES.length}}</span> {{notesLabel}}</strong>
+                <paper-icon-button id="addNoteButton" alt="menu" on-click="raiseAddNoteDialog" raised class="noteButton secondary">
+                  <iron-icon id="addNoteIcon" icon="add"></iron-icon>
+                  <span>Add Note</span>
+                </paper-icon-button>
+              </p>
+              <hr/>
+              <div class="noteWrapper">
+                <template is="dom-repeat" items="{{invoice.NOTES}}">
+                  <div class="note">
+                    <p class="noteAuthor">{{item.CREATED_BY_PERSON_NAME}}</p>
+                    <p class="noteContent">{{item.NOTE}}</p>
+                    <p class="noteDate">{{item.CREATE_DATE}}</p>
+                  </div>
+                </template>
+                <div hidden$="{{hasNotes}}">
+                  <p class="noteContent noNotes"><em>There are no notes for this invoice</em></p>
+                </div>
+              </div>
+
+            </div>
+        </paper-card>
+
+        <reject-dialog 
+            id="rejectDialog" 
+            open="false" 
+            user-person-id="[[approvalUser.personId]]"
+            invoice="[[invoice]]">
+        </reject-dialog>
+        <hold-dialog 
+            id="holdDialog" 
+            open="false" 
+            user-person-id="[[approvalUser.personId]]"
+            invoice="[[invoice]]">
+        </hold-dialog>
+        <receipt-dialog
+            id="attachmentDialog"
+            open="false" 
+            receipts-url="[[invoice.RECEIPTS_URL]]">
+        </receipt-dialog>
+        <unsaved-change-dialog
+            id="unsavedChangeDialog"
+            open="false">
+        </unsaved-change-dialog>        
+        <add-note-dialog 
+            id="addNoteDialog" 
+            open="false" 
+            on-invoice-add-note="onInvoiceAddNote">
+        </add-note-dialog>
+      </section>
+    </template>
+
+    <script>
+        // element registration
+        Polymer({
+            is: "invoice-detail",
+
+            properties: {
+                projectDetail: {
+                  type: Object,
+                  value: null
+                },
+                projects: {
+                    type: Array,
+                    value: null
+                },
+                selectedProjectId: {
+                    type: String,
+                    value: null,
+                    observer: "setDefaultSelectedProject"
+                },    
+                defaultValues: {
+                    type: Object
+                },
+                invoice: {
+                    type: Object,
+                    observer: 'invoiceChanged',
+                    notify: true
+                },
+                isOnHold: {
+                    type: Boolean,
+                    value: false
+                },
+                collapseOpened: {
+                    type: Boolean,
+                    value: false
+                },
+                isExpenseInvoice: Boolean,
+                isProjectInvoice: Boolean,
+                isBillableTime: Boolean,
+                hasNotes: Boolean,
+                notesLabel: String,
+                approvalUser: {
+                    type: Object,
+                    observer: 'approvalUserChanged'
+                },
+                canChangeProject: Boolean,
+                cmSfdcLink: {
+                    type: String,
+                    value: null
+                },
+            },
+            onIronSelectProject: function(event) {
+                this.selectedProject = event.detail.item.selectedProject;
+                var data = {}
+                if (this.selectedProject.projTypeCategory === 'Consultation') {
+                    data.cpId = this.selectedProject.projId;
+                }
+                else if (this.selectedProject.projTypeCategory ==='Event') {
+                    data.eventId = this.selectedProject.projId;
+                }
+                invoiceModule.getProjectDetail(data)
+                .then ((projectDetail) => {
+                    this.set('projectDetail',projectDetail);
+                    this.set('projectDetail.PROJECT_ID',this.selectedProject.projId);
+                });              
+            },
+            filterProjects: function(item) {
+                return !item.hideProject;
+            },
+            setDefaultSelectedProject: function(newVal, oldVal) {
+                this.setDefaultSelected("selectedProjectId", newVal, oldVal);
+            },
+            formatDate: function(date) {
+                return (new Date(date)).toLocaleDateString();
+            },
+            setDefaultSelected: function(propertyName, newVal, oldVal) {
+                if (!this.defaultValues) {
+                    this.defaultValues = {};
+                }
+                if ((oldVal === null || !this.defaultValues[propertyName]) && newVal !== oldVal) {
+                    this.defaultValues[propertyName] = newVal
+                }
+            },
+            isInvoiceModified: function() {
+                // changing the project on expenses is the only permitted modification now
+                return this.projectDetail.PROJECT_TITLE != this.invoice.PROJECT_TITLE && 
+                  this.projectDetail.PROJECT_ID != this.invoice.PROJECT_ID;
+            },
+            approve: function() {
+                var act;
+                if (this.isInvoiceModified()) {
+                    act = this.cloneInvoiceAssignAndApprove();
+                }
+                else {
+                    act = invoiceModule.approve(this.approvalUser.personId,this.invoice.INVOICE_ID);
+                }
+                act
+                .then((result) => {
+                    this.fire('invoice-approved', null);
+                })
+                .catch(function(err) {
+                    console.log(err);
+                });
+            },
+            skip: function() {
+                if (this.isInvoiceModified()) {
+                    this.$.unsavedChangeDialog.isOpen = true;
+                }
+                else {
+                    this.fire('invoice-skipped', null);
+                }
+            },
+            cancel: function () {
+                this.fire('invoice-cancelled', null);
+            },
+            reject: function() {
+                this.$.rejectDialog.invoice = this.invoice;
+                this.$.rejectDialog.isOpen = true;
+            },      
+            hold: function() {
+                this.$.holdDialog.invoice = this.invoice;
+                this.$.holdDialog.isOpen = true;
+            },
+            displayReceipt: function(evt) {
+              if(_.endsWith(this.invoice.RECEIPTS_URL.toLowerCase(), 'pdf')) 
+                window.open(this.invoice.RECEIPTS_URL);
+              else 
+                this.$.attachmentDialog.isOpen = true;
+            },
+            invoiceChanged: function(newValue, oldValue) {
+                if (!newValue) return;
+
+                if (newValue.MEETING_TIME || newValue.PREP_TIME)
+                  this.set('isBillableTime',true);
+                else
+                  this.set('isBillableTime',false);
+
+                this.set('isExpenseInvoice',newValue.PROJECT_TYPE.indexOf('Expense') > -1);
+                this.set('isProjectInvoice',!this.isExpenseInvoice && newValue.PROJECT_TYPE.indexOf('Adjustment') === -1);
+
+                //computed property doesn't work for this because on the first go round approvalUser is undefined
+                this.set('canChangeProject',this.isExpenseInvoice && this.approvalUser && this.approvalUser.isEventsMember && !newValue.INTERPRETER_FOR_PERSON_NAME);
+
+                //this is a provison for approvers that can change the project associated with the invoice
+                this.set('projectDetail',{});
+                this.set('projectDetail.PROJECT_ID',newValue.PROJECT_ID);
+                this.set('projectDetail.HOURLY_RATE',newValue.HOURLY_RATE);
+                this.set('projectDetail.PRIMARY_RM_NAME',newValue.PRIMARY_RM_NAME);
+                this.set('projectDetail.PROJECT_TITLE',newValue.PROJECT_TITLE);
+                this.set('projectDetail.PROJECT_TYPE',newValue.PROJECT_TYPE);
+                this.set('projectDetail.TWILIO_IND',newValue.TWILIO_IND);
+                this.set('projectDetail.CLIENTS',newValue.CLIENTS);
+                this.set('hasNotes',newValue.NOTES && newValue.NOTES.length > 0);
+                this.set('notesLabel', newValue.NOTES && newValue.NOTES.length === 1 ? 'Note' : 'Notes');
+            },
+            approvalUserChanged: function(newValue, oldValue) {
+                this.set('canChangeProject',this.isExpenseInvoice && this.approvalUser && this.approvalUser.isEventsMember && !newValue.INTERPRETER_FOR_PERSON_NAME);
+            },
+            ready: function() {
+                invoiceModule.getCmProjects(this.invoice.PAYEE_COUNCIL_MEMBER_ID)
+                .then((projects) => {
+                    this.projects = _.filter(projects,function(project) {
+                        return project.allowExpenses;
+                    });
+                })
+                .then(() => {
+                    if (this.approvalUser.isComplianceMemberStatusMember || this.approvalUser.isComplianceSeniorLegalMember)
+                      this.getCmSfdcId(this.invoice.PAYEE_COUNCIL_MEMBER_ID);
+                })
+                .catch(function(err) {
+                    console.log(err);
+                });                
+            },
+            cloneInvoiceAssignAndApprove: function() {
+
+                var data = {invoiceId:this.invoice.INVOICE_ID,loggedInPersonId:this.approvalUser.personId};
+
+                if (this.projectDetail.PROJECT_TYPE.indexOf("Consultation") >= 0) {
+                    data.consultationParticipantId = this.projectDetail.PROJECT_ID;
+                }
+                else if (this.projectDetail.PROJECT_TYPE.indexOf("Live Meeting") >= 0
+                    ||  this.projectDetail.PROJECT_TYPE.indexOf("Visit") >= 0
+                    ||  this.projectDetail.PROJECT_TYPE.indexOf("Conference Calls") >= 0) {
+                    data.eventId = this.projectDetail.PROJECT_ID;                      
+                }
+                else if (this.projectDetail.PROJECT_TYPE.indexOf("Qualtrics Survey") >= 0) {
+                    data.qualtricsSurveyId = this.projectDetail.PROJECT_ID;                      
+                }
+                else if (this.projectDetail.PROJECT_TYPE.indexOf("Survey") >= 0) {
+                    data.Survey2SurveyId = this.projectDetail.PROJECT_ID;                      
+                }  
+                else if (this.projectDetail.PROJECT_TYPE.indexOf("Call Interpreter") >= 0) {
+                    data.callInterpreterId = this.projectDetail.PROJECT_ID;                      
+                }  
+                var newInvoiceId;
+
+                return invoiceModule.cloneInvoiceWithChanges(data)
+                .then((dbResults) => {
+                    newInvoiceId = dbResults[0].INVOICE_ID;
+                    return invoiceModule.assignInvoicesForApproval();
+                })
+                .then((dbResults)  => {
+                    return invoiceModule.approve(this.approvalUser.personId,newInvoiceId);
+                })
+                .catch(function(err) {
+                    console.log(err);
+                    throw err;
+                });            
+            },
+            getCmSfdcId: function(cmVegaId) {
+                invoiceModule.getCmSfdcId(cmVegaId)
+                .then((result)  => {
+                    this.cmSfdcLink = result ? "https://login.salesforce.com/" + result.Id : null;
+                });
+            },
+            raiseAddNoteDialog: function() {
+                this.$.addNoteDialog.isOpen = true;
+            },
+            onInvoiceAddNote: function(evt) {
+                var note = evt.detail ? evt.detail.trim() : null;
+                if (!note || note.length === 0) return;
+                    
+                invoiceModule.addNote(this.approvalUser.personId,this.invoice.INVOICE_ID,note)
+                .then((note)  => {
+                    if (note) {
+                      this.unshift('invoice.NOTES',note); // prepend new note
+                      this.set('hasNotes',true);
+                      this.set('notesLabel', this.invoice.NOTES && this.invoice.NOTES.length === 1 ? 'Note' : 'Notes');                      
+                    }
+                })
+                .catch(function(err) {
+                    console.log(err);
+                });                 
+            }
+        });
+    </script>
+</dom-module>

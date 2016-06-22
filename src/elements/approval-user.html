@@ -1,0 +1,34 @@
+<dom-module id="approval-user">
+    <template>
+        <glg-current-user user="{{user}}" on-user-changed="initApprovalGroupMembership"></glg-current-user>
+    </template>
+    <script>
+        Polymer({
+            is: "approval-user",
+            properties: {
+                user: Object,
+                approvalUser: {
+                    type: Object,
+                    notify: true
+                },               
+            },
+            initApprovalGroupMembership: function(evt) {
+                (function(that) {
+                    console.log("User: " + evt.detail.value.firstName + " " + evt.detail.value.lastName);
+                    return invoiceModule.getApprovalGroupMembership(evt.detail.value.personId)
+                    .then((results) => {
+                        var user = _.clone(evt.detail.value);
+                        for (result of results) {
+                            _.set(user,_.camelCase("is " + _.replace(result.APPROVAL_GROUP_NAME," ","") + " member"),true);
+                            console.log("User: " + user.firstName + " " + user.lastName + " (" + user.personId + ") is a member of " + result.APPROVAL_GROUP_NAME);
+                        }
+                        that.approvalUser = user;
+                    })
+                    .catch(function(err) {
+                        console.log(err);
+                    });
+                })(this);                 
+            }          
+        });
+    </script>
+</dom-module>

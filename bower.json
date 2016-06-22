@@ -1,0 +1,27 @@
+{
+  "name": "cm-pay-approval",
+  "description": "How GLG approves project and expense reimbursement payment requests",
+  "main": "cm-pay-approval.js",
+  "authors": [
+    "Patrick McMahon",
+    "Christina Dobi"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/glg/cm-pay-approval",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#~1.2.3",
+    "paper-elements": "PolymerElements/paper-elements#~1.0.6",
+    "iron-pages": "polymerelements/iron-pages#~1.0.4",
+    "page": "visionmedia/page.js#~1.6.4",
+    "glg-current-user": "Custom-Elements/glg-current-user#1.0.4",
+    "iron-ajax": "polymerelements/iron-ajax#~1.1.1",
+    "iron-validator-behavior": "PolymerElements/iron-validator-behavior#^1.0.0"
+  }
+}

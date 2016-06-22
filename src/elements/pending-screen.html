@@ -1,0 +1,183 @@
+<dom-module id="pending-screen">
+    <link rel="import" href="../styles/glg-theme.css" type="css">
+    <link rel="import" href="../styles/cm-pay-approval-common.css" type="css">
+    <template>
+        <style>
+            .status-bar{
+                margin-bottom: 30px;
+            }
+            .left-side{
+                width: 68%;
+                margin-right: 2%;
+            }
+            .right-side{
+                width: 30%;
+            }
+            .wide{
+                width: 100%;
+            }
+        </style>
+        
+        <div class="status-bar">
+            <h4>{{pendingTotal.INVOICE_COUNT}} Invoices {{pendingTotal.USD_AMOUNT}} Remaining</h4>
+        </div>
+        
+        <template is="dom-if" if="[[invoice]]">
+            <template is="dom-if" if="{{isEventsApprovalUser}}">
+                <error-message message="[[invoice.WARNING]]"></error-message>
+            </template>
+        
+            <div class="layout horizontal container">
+                <div class="left-side">
+                    <invoice-detail id="invoiceDetail"
+                        approval-user="[[approvalUser]]"
+                        invoice="[[invoice]]"
+                        is-on-hold="[[isOnHold]]"
+                        on-invoice-skipped="onInvoiceSkipped"
+                        on-invoice-approved="onInvoiceApproved"
+                        on-invoice-rejected="getNextInvoiceToApprove"
+                        on-invoice-held="onInvoiceHeld">
+                    </invoice-detail>
+                </div>
+                <div class="right-side">
+                    <template is="dom-if" if="{{approvalUser.isAccountingMember}}">
+                        <accounting-context id="accountingContext" payee-person-id="[[invoice.PAYEE_PERSON_ID]]" user-person-id="[[approvalUser.personId]]"></accounting-context>
+                    </template>
+                    <template is="dom-if" if="{{showEventsContext}}">
+                        <events-context id="eventsContext" payee-person-id="[[invoice.PAYEE_PERSON_ID]]" user-person-id="[[approvalUser.personId]]" invoice-id="[[invoice.INVOICE_ID]]"></events-context>
+                    </template>   
+                </div>         
+            </div>
+        </template>
+        <paper-toast id="toast"></paper-toast>
+        <template is="dom-if" if="[[!invoice]]">
+            <div id="emptyQueueMsg"><span>The approval queue is empty</span></div>
+        </template>
+    </template>
+
+    <script>
+        // element registration
+        Polymer({
+            is: "pending-screen",
+
+            properties: {
+                invoice: Object,
+                isOnHold: {
+                    type: Boolean,
+                    value: false,
+                    readonly: true
+                },
+                pendingTotal: Object,
+                approvalUser: {
+                    type: Object,
+                    observer: 'approvalUserChanged'
+                },
+                showEventsContext: {
+                    type: Boolean,
+                    value: false,
+                    computed: 'getShowEventsContext(approvalUser, "Events", invoice)'
+                },
+                invoiceAfterThisId: {
+                    type: String,
+                    value: null
+                }
+            },          
+            onInvoiceApproved: function(evt) {
+                var context = this.$$('#accountingContext')
+                if (context) context.refreshFromDb();
+                this.getNextInvoiceToApprove();
+            },
+            onInvoiceSkipped: function(evt) {
+                this.getNextInvoiceToApprove()
+                .then( (result) => {
+                    if (this.pendingTotal.INVOICE_COUNT == 1) {
+                        this.$.toast.text = "This is the last invoice";
+                        this.$.toast.open();                        
+                    }
+                });
+            },
+            onInvoiceHeld: function(evt) {
+                this.$$('#accountingContext').refreshFromDb();
+                this.getPendingTotal();
+                this.getNextInvoiceToApprove();
+            }, 
+            getShowEventsContext: function(user, group, invoice) {
+                return invoice && this.approvalUser.isEventsMember && invoice.PROJECT_TYPE.includes('Expense');
+            },  
+            getNextInvoiceToApprove: function() {
+                return (function(that) {
+
+                    var currentInvoiceId = null;
+                    if (that.invoice && that.invoice.INVOICE_ID) {
+                        currentInvoiceId = that.invoice.INVOICE_ID;
+                    }
+                    else if (that.invoiceAfterThisId) {
+                        // resume where we were when last session ended
+                        currentInvoiceId = that.invoiceAfterThisId;
+                        that.invoiceAfterThisId = null;
+                    }
+                    that.setCookie('invoiceAfterThisId',currentInvoiceId==null?"":currentInvoiceId,7);
+
+                    return invoiceModule.getNextInvoiceToApprove(that.approvalUser.personId,currentInvoiceId)
+                    .then((result) => {
+                        if (result) {
+                            result["twilioString"] = result.TWILIO_IND ? 'via Twilio' : null;
+                            if (result.INVOICE_ID) result["id"] = result.INVOICE_ID;
+                            else if (result.PAYMENT_ID) result["id"] = result.PAYMENT_ID;
+                            else if (result.COUNCIL_MEMBER_INVOICE_SUBMITTED_ID) result["id"] = result.COUNCIL_MEMBER_INVOICE_SUBMITTED_ID;
+                            that.invoice = result;
+                        }
+                        else { 
+                            that.invoice = null; 
+                        } 
+                        return that.getPendingTotal();               
+                    })      
+                    .catch(function(err) {
+                        console.error(err);
+                        console.log(err.stack);
+                    });
+                })(this);
+            },
+            getPendingTotal: function() {
+                return invoiceModule.getPendingTotal(this.approvalUser.personId)
+                .then( (result) => {
+                    if (result) {
+                        result[0].USD_AMOUNT = invoiceModule.currencyFormat(result[0].USD_AMOUNT);
+                        this.set('pendingTotal', result[0]);
+                    }
+                });
+            },
+            periodicRefresh: function() {
+                console.log("pending-screen:periodicRefresh");
+                this.getPendingTotal();
+                this.async(this.periodicRefresh,60000);                
+            },
+            approvalUserChanged: function() {
+                if (this.approvalUser && this.approvalUser.personId) {
+                    this.getNextInvoiceToApprove();
+                    //this.periodicRefresh();
+                }
+            },
+            getCookie: function (cname) {
+                var name = cname + "=";
+                var ca = document.cookie.split(';');
+                for(var i=0; i<ca.length; i++) {
+                    var c = ca[i];
+                    while (c.charAt(0)==' ') c = c.substring(1);
+                    if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
+                }
+                return "";
+            },
+            setCookie: function(cname, cvalue, exdays) {
+                var d = new Date();
+                d.setTime(d.getTime() + (exdays*24*60*60*1000));
+                var expires = "expires="+d.toUTCString();
+                document.cookie = cname + "=" + cvalue + "; " + expires;
+            },
+            ready: function() {
+                this.invoiceAfterThisId = this.getCookie('invoiceAfterThisId');
+                if (this.invoiceAfterThisId === "") this.invoiceAfterThisId = null;
+            }                                        
+        });
+    </script>
+</dom-module>

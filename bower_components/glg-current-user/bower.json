@@ -1,0 +1,25 @@
+{
+  "name": "glg-current-user",
+  "version": "1.0.4",
+  "authors": [
+    "Anonymous <anonymous@example.com>"
+  ],
+  "description": "An element providing a solution to no problem in particular.",
+  "keywords": [
+    "web-component",
+    "polymer",
+    "seed"
+  ],
+  "main": "glg-current-user.html",
+  "license": "http://polymer.github.io/LICENSE.txt",
+  "homepage": "https://github.com/<USERNAME>/seed-element/",
+  "ignore": [
+    "/.*",
+    "/test/"
+  ],
+  "dependencies": {
+    "iron-ajax": "PolymerElements/iron-ajax#~1.0.6",
+    "polymer": "Polymer/polymer#^1.1.0",
+    "js-cookie": "~2.0.4"
+  }
+}

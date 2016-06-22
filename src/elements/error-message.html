@@ -1,0 +1,25 @@
+<dom-module id="error-message">
+    <link rel="import" href="../styles/glg-theme.css" type="css">
+    <link rel="import" href="../styles/cm-pay-approval-common.css" type="css">
+    <template>
+      <style>
+        
+      </style>
+      <div class="layout horizontal container">
+          <div class="flex-2 container">
+              <div class="alert danger"><span>{{message}}</span></div>
+          </div>
+      </div>
+
+    </template>
+    <script>
+        // element registration
+        Polymer({
+            is: "error-message",
+
+            properties: {
+                message: String
+            }
+        });
+    </script>
+</dom-module>

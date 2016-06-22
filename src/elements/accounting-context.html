@@ -1,0 +1,116 @@
+<dom-module id="accounting-context">
+    <link rel="import" href="../styles/glg-theme.css" type="css">
+    <link rel="import" href="../styles/cm-pay-approval-common.css" type="css">
+    <template>
+      <style>
+        paper-card{
+          margin: 0 0 20px 0;
+          padding: 30px;
+          border: 1px solid #f2f2f2;
+          width: 100%;
+        }
+        paper-tooltip{
+          width: 200px;
+        }
+        h4{
+          @apply(--uppercase-label);
+          margin-bottom: -5px;
+        }
+      </style>
+
+      <!-- For Finance -->
+      <paper-card>
+          <div class="card-header">
+              <h4>Council Member</h4>
+          </div>
+          <hr/>
+          <div class="card-body">
+              <p>
+                  <strong>Daily Approved Total</strong><br>
+                  {{approvedAmountToday}}&nbsp;of&nbsp;{{totalAmountToday}}
+                  <paper-tooltip position="top left">The total amount approved for the current Council Member.</paper-tooltip>
+              </p>
+              <p>
+                  <strong>Prior 30 Days Total</strong><br>
+                  {{approvedAmountPrior30Days}}
+                  <paper-tooltip position="top left">The total amount approved for this Council Member before but not including today.</paper-tooltip>
+              </p>
+              <p>
+                  <strong>Prior 30 Days Disputes</strong><br>
+                  {{disputeCountPrior30Days}}
+                  <paper-tooltip position="top left">The total amount of disputes for this Council Member in the 30 days prior to today.</paper-tooltip>
+              </p>
+          </div>
+      </paper-card>
+
+      <!-- For Events -->
+      <!-- <paper-card>
+          <div class="card-header">
+              <h4>Project</h4>
+          </div>
+          <hr/>
+          <div class="card-body">
+              <p>
+                  <strong>Total Expenses</strong><br>
+                  {{approvedAmountToday}}&nbsp;of&nbsp;{{totalAmountToday}}
+                  <paper-tooltip position="top left">The total amount approved for the current project.</paper-tooltip>
+              </p>
+              <p>
+                  <strong>Total for TYPE</strong><br>
+                  {{approvedAmountPrior30Days}}
+                  <paper-tooltip position="top left">The total amount approved for this type within this project.</paper-tooltip>
+              </p>
+          </div>
+      </paper-card> -->
+
+    </template>
+    <script>
+        // element registration
+        Polymer({
+            is: "accounting-context",
+
+            properties: {
+                payeePersonId: {
+                    type: Number,
+                    observer: 'refreshFromDb'
+                },
+                approvedAmountToday: Number,
+                totalAmountToday: Number,
+                disputeCountPrior30Days: Number,
+                approvedAmountPrior30Days: Number,
+                userPersonId: {
+                  type: String,  
+                  observer: 'refreshFromDb'   
+                }
+            },        
+            refreshFromDb: function() {
+                (function(that) {
+                    if (!that.payeePersonId || !that.userPersonId) return;
+                    return invoiceModule.getAccountingContext(that.payeePersonId, that.userPersonId)
+                    .then((result) => {
+                        if (result) {
+                            var loc = [navigator.language, { style: 'currency', currency: 'USD' }];
+                            var row                        = result[0];
+                            that.approvedAmountToday       = invoiceModule.currencyFormat(row.USD_AMOUNT_APPROVED_TODAY);
+                            that.disputeCountPrior30Days   = row.DISPUTE_COUNT_PRIOR_30D;
+                            that.approvedAmountPrior30Days = invoiceModule.currencyFormat(row.USD_AMOUNT_APPROVED_PRIOR_30D);
+                            that.totalAmountToday          = invoiceModule.currencyFormat(row.USD_AMOUNT_APPROVED_TODAY + row.USD_AMOUNT_REJECTED_TODAY + row.USD_AMOUNT_PENDING_TODAY);
+                        }
+                    })
+                    .catch(function(err) {
+                        console.log(err);
+                    });
+                })(this);                        
+            },
+            periodicRefresh: function() {
+                console.log("accounting-context:periodicRefresh");
+                this.refreshFromDb();
+                this.async(this.periodicRefresh,40000);                
+            },
+            attached: function() {
+                this.refreshFromDb();
+                //this.periodicRefresh();
+            }
+        });
+    </script>
+</dom-module>
